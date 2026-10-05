@@ -1,6 +1,7 @@
 import { ArrowRight, CalendarDays, Check, Clock3, MapPin, Music2, Plus, Sparkles } from 'lucide-react'
 import { upcomingEvents } from '../data/demoData.js'
 import SectionHeading from '../components/SectionHeading.jsx'
+import WeddingInspiration from '../components/WeddingInspiration.jsx'
 
 export default function DashboardPage({ user, onNavigate }) {
   const nextEvent = upcomingEvents[0]
@@ -37,6 +38,8 @@ export default function DashboardPage({ user, onNavigate }) {
           </div>
         </div>
       </section>
+
+      <WeddingInspiration />
 
       <section className="grid gap-8 lg:grid-cols-[1.35fr_.85fr]">
         <div>

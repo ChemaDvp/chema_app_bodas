@@ -26,6 +26,7 @@ El workflow `.github/workflows/deploy.yml` construye y publica la aplicación al
 
 - `src/components/`: acceso/registro, layout con navegación inferior y componentes compartidos.
 - `src/pages/`: Inicio, Peticiones, Mi boda, Presupuesto y Cuenta.
+- `src/components/WeddingInspiration.jsx`: collage de fotos y carrusel de vídeos de muestra; sus imágenes y vídeos se cargan desde Unsplash y Pexels.
 - `src/data/demoData.js`: datos iniciales de muestra.
 - `src/index.css`: estilos base y directivas Tailwind CSS.
 
