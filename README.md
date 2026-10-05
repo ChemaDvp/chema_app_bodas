@@ -29,5 +29,6 @@ El workflow `.github/workflows/deploy.yml` construye y publica la aplicación al
 - `src/components/WeddingInspiration.jsx`: collage de fotos y carrusel de vídeos de muestra; sus imágenes y vídeos se cargan desde Unsplash y Pexels.
 - `src/data/demoData.js`: datos iniciales de muestra.
 - `src/index.css`: estilos base y directivas Tailwind CSS.
+- `public/images/`: fotos optimizadas para el fondo del acceso y el collage.
 
 El acceso y los datos son una demostración local del frontend; no hay autenticación ni persistencia en servidor. Conecta un proveedor de autenticación y una API/base de datos antes de usar información real de clientes.
