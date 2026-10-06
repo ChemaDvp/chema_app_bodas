@@ -14,7 +14,7 @@ No hay una API/servidor intermedio propio. Las credenciales de Supabase que usa 
 
 ## Estado de la integración
 
-Ya está implementado el inicio de sesión con Supabase Auth, la consulta del rol y la comprobación de la boda vinculada. La pantalla de acceso no ofrece registro público y las cuentas sin rol ni boda asociada quedan bloqueadas.
+Ya está implementado el inicio de sesión con Supabase Auth, la consulta del rol y la comprobación de la boda vinculada. La pantalla de acceso no ofrece registro público y las cuentas sin rol ni boda asociada quedan bloqueadas. El frontend también permite solicitar el restablecimiento de contraseña y definir una nueva desde el enlace recibido por correo.
 
 La conexión con Supabase está en su fase inicial: **las páginas principales aún usan datos locales de demostración**. Todavía no están implementados el alta/edición de bodas desde la interfaz, la carga de presupuestos y multimedia, la gestión persistente de canciones, las invitaciones QR/enlace ni la separación completa de las interfaces y acciones por rol. No usar todavía con información real de clientes.
 

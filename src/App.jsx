@@ -9,13 +9,15 @@ export default function App() {
   const [weddingId, setWeddingId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [authError, setAuthError] = useState('')
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   useEffect(() => {
     let mounted = true
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (mounted) {
         setSession(nextSession)
         setAuthError('')
+        if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
       }
     })
 
@@ -97,9 +99,35 @@ export default function App() {
     if (error) setAuthError(error.message)
   }
 
+  async function requestPasswordReset(email) {
+    setAuthError('')
+    const redirectTo = `${window.location.origin}${window.location.pathname}`
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+    if (error) {
+      setAuthError(error.message)
+      return false
+    }
+    return true
+  }
+
+  async function updatePassword(password) {
+    setAuthError('')
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) {
+      setAuthError(error.message)
+      return false
+    }
+    setPasswordRecovery(false)
+    return true
+  }
+
   async function logout() {
     const { error } = await supabase.auth.signOut()
     if (error) setAuthError(`No se pudo cerrar la sesión: ${error.message}`)
+  }
+
+  if (passwordRecovery) {
+    return <AuthScreen recoveryMode onUpdatePassword={updatePassword} error={authError} />
   }
 
   if (loading) {
@@ -107,7 +135,13 @@ export default function App() {
   }
 
   if (!session) {
-    return <AuthScreen onLogin={login} error={authError} />
+    return (
+      <AuthScreen
+        onLogin={login}
+        onRequestPasswordReset={requestPasswordReset}
+        error={authError}
+      />
+    )
   }
 
   if (!role) {
