@@ -5,14 +5,27 @@ import RequestsPage from '../pages/RequestsPage.jsx'
 import WeddingPage from '../pages/WeddingPage.jsx'
 import BudgetPage from '../pages/BudgetPage.jsx'
 import AccountPage from '../pages/AccountPage.jsx'
+import AdminWeddingsPage from '../pages/AdminWeddingsPage.jsx'
+import AdminMediaPage from '../pages/AdminMediaPage.jsx'
+import AdminWeddingWorkspace from '../pages/AdminWeddingWorkspace.jsx'
 
-const navItems = [
+const coupleNavItems = [
   { id: 'home', label: 'Inicio', icon: Home },
   { id: 'requests', label: 'Peticiones', icon: ListMusic },
   { id: 'wedding', label: 'Mi boda', icon: WeddingRings },
   { id: 'budget', label: 'Presupuesto', icon: Wallet },
   { id: 'account', label: 'Cuenta', icon: UserRound },
 ]
+
+const adminNavItems = [
+  { id: 'weddings', label: 'Bodas', icon: WeddingRings },
+  { id: 'media', label: 'Contenido', icon: CameraIcon },
+  { id: 'account', label: 'Cuenta', icon: UserRound },
+]
+
+function CameraIcon({ size = 22, strokeWidth = 1.8, ...props }) {
+  return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M14.5 4h-5L7.5 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5z" /><circle cx="12" cy="13" r="3" /></svg>
+}
 
 function WeddingRings({ size = 22, strokeWidth = 1.8, ...props }) {
   return (
@@ -35,6 +48,8 @@ function WeddingRings({ size = 22, strokeWidth = 1.8, ...props }) {
 }
 
 const pageTitles = {
+  weddings: ['Administración', 'Bodas'],
+  media: ['Administración', 'Contenido común'],
   home: ['Tu espacio', 'Buenos días'],
   requests: ['La banda sonora', 'Peticiones'],
   wedding: ['Todo en su momento', 'Mi boda'],
@@ -43,25 +58,37 @@ const pageTitles = {
 }
 
 export default function DashboardLayout({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('home')
+  const isAdmin = user.role === 'admin'
+  const navItems = isAdmin ? adminNavItems : coupleNavItems
+  const [activeTab, setActiveTab] = useState(isAdmin ? 'weddings' : 'home')
+  const [selectedWedding, setSelectedWedding] = useState(null)
   const [notification, setNotification] = useState(false)
   const [titleEyebrow, title] = pageTitles[activeTab]
   const displayName = user.name || 'Alex'
   const firstName = displayName.split(' ')[0]
 
-  const page = {
-    home: <DashboardPage user={user} onNavigate={setActiveTab} />,
-    requests: <RequestsPage />,
-    wedding: <WeddingPage />,
-    budget: <BudgetPage />,
+  const couplePage = {
+    home: <DashboardPage user={user} weddingId={user.weddingId} onNavigate={setActiveTab} />,
+    requests: <RequestsPage weddingId={user.weddingId} user={user} />,
+    wedding: <WeddingPage weddingId={user.weddingId} user={user} />,
+    budget: <BudgetPage weddingId={user.weddingId} user={user} />,
     account: <AccountPage user={user} onLogout={onLogout} />,
-  }[activeTab]
+  }
+  const page = isAdmin
+    ? activeTab === 'account'
+      ? <AccountPage user={user} onLogout={onLogout} />
+      : activeTab === 'media'
+        ? <AdminMediaPage />
+        : selectedWedding
+          ? <AdminWeddingWorkspace wedding={selectedWedding} user={user} onBack={() => setSelectedWedding(null)} />
+          : <AdminWeddingsPage onManage={setSelectedWedding} />
+    : couplePage[activeTab]
 
   return (
     <div className="min-h-screen bg-canvas">
       <header className="sticky top-0 z-30 border-b border-ink/10 bg-canvas/95 backdrop-blur-xl">
         <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-5 sm:px-8">
-          <button onClick={() => setActiveTab('home')} className="flex items-center gap-2.5 text-ink">
+          <button onClick={() => { setActiveTab(isAdmin ? 'weddings' : 'home'); setSelectedWedding(null) }} className="flex items-center gap-2.5 text-ink">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent/10 text-accent"><Disc3 size={20} /></span>
             <span className="font-display text-xl tracking-wide">ritmo</span>
           </button>
@@ -74,7 +101,7 @@ export default function DashboardLayout({ user, onLogout }) {
               <Bell size={19} />
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-canvas bg-accent" />
             </button>
-            <button onClick={() => setActiveTab('account')} className="flex items-center gap-2 rounded-full p-1 pr-2 transition hover:bg-accent/10">
+            <button onClick={() => { setActiveTab('account'); setSelectedWedding(null) }} className="flex items-center gap-2 rounded-full p-1 pr-2 transition hover:bg-accent/10">
               <span className="grid h-9 w-9 place-items-center rounded-full bg-accent/15 text-xs font-semibold text-ink">
                 {displayName.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}
               </span>

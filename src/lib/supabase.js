@@ -7,4 +7,5 @@ if (!supabaseUrl || !supabasePublishableKey) {
   throw new Error('Falta configurar VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY en .env.local.')
 }
 
+/** @type {import('@supabase/supabase-js').SupabaseClient<import('./database.types').Database>} */
 export const supabase = createClient(supabaseUrl, supabasePublishableKey)

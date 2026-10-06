@@ -3,13 +3,19 @@ import AuthScreen from './components/AuthScreen.jsx'
 import DashboardLayout from './components/DashboardLayout.jsx'
 import { supabase } from './lib/supabase.js'
 
+function isPasswordSetupLink() {
+  const queryParams = new URLSearchParams(window.location.search)
+  const hashParams = new URLSearchParams(window.location.hash.slice(1))
+  return ['recovery', 'invite'].includes(queryParams.get('type') || hashParams.get('type'))
+}
+
 export default function App() {
   const [session, setSession] = useState(null)
   const [role, setRole] = useState(null)
   const [weddingId, setWeddingId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [authError, setAuthError] = useState('')
-  const [passwordRecovery, setPasswordRecovery] = useState(false)
+  const [passwordRecovery, setPasswordRecovery] = useState(isPasswordSetupLink)
 
   useEffect(() => {
     let mounted = true
@@ -17,7 +23,9 @@ export default function App() {
       if (mounted) {
         setSession(nextSession)
         setAuthError('')
-        if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
+        if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && isPasswordSetupLink())) {
+          setPasswordRecovery(true)
+        }
       }
     })
 
@@ -66,6 +74,25 @@ export default function App() {
         setWeddingId(null)
         setLoading(false)
         return
+      }
+
+      const inviteToken = new URLSearchParams(window.location.search).get('invite')
+      if (inviteToken) {
+        const { data: claimedWeddingId, error: claimError } = await supabase.rpc('claim_wedding_invitation', {
+          p_token: inviteToken,
+        })
+        if (!mounted) return
+        if (claimError) {
+          setAuthError(`No se pudo canjear la invitación: ${claimError.message}`)
+        } else {
+          setRole('couple')
+          setWeddingId(claimedWeddingId)
+          const url = new URL(window.location.href)
+          url.searchParams.delete('invite')
+          window.history.replaceState({}, '', url)
+          setLoading(false)
+          return
+        }
       }
 
       const { data: membership, error: membershipError } = await supabase
@@ -162,6 +189,7 @@ export default function App() {
   }
 
   const user = {
+    id: session.user.id,
     name: session.user.email?.split('@')[0] || 'Ritmo',
     email: session.user.email || '',
     role,

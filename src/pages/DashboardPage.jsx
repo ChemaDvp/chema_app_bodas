@@ -1,98 +1,90 @@
-import { ArrowRight, CalendarDays, Check, Clock3, MapPin, Music2, Plus, Sparkles } from 'lucide-react'
-import { upcomingEvents } from '../data/demoData.js'
+import { useEffect, useState } from 'react'
+import { ArrowRight, CalendarDays, Clock3, MapPin, Music2, Sparkles, Wallet } from 'lucide-react'
 import SectionHeading from '../components/SectionHeading.jsx'
 import WeddingInspiration from '../components/WeddingInspiration.jsx'
+import { supabase } from '../lib/supabase.js'
 
-export default function DashboardPage({ user, onNavigate }) {
-  const nextEvent = upcomingEvents[0]
-  const firstName = user.name?.split(' ')[0] || 'Alex'
+function daysUntil(date) {
+  if (!date) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const weddingDate = new Date(`${date}T00:00:00`)
+  return Math.ceil((weddingDate - today) / (1000 * 60 * 60 * 24))
+}
+
+function formatDate(date) {
+  if (!date) return 'Fecha pendiente'
+  return new Intl.DateTimeFormat('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${date}T00:00:00Z`))
+}
+
+export default function DashboardPage({ user, weddingId, onNavigate }) {
+  const [wedding, setWedding] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const firstName = user.name?.split(' ')[0] || 'pareja'
+  const remainingDays = daysUntil(wedding?.wedding_date)
+
+  useEffect(() => {
+    let mounted = true
+    async function loadWedding() {
+      const { data, error: queryError } = await supabase
+        .from('weddings')
+        .select('id, partner_names, wedding_date, venue, location, description')
+        .eq('id', weddingId)
+        .single()
+      if (!mounted) return
+      if (queryError) setError(`No se pudo cargar la boda: ${queryError.message}`)
+      else setWedding(data)
+      setLoading(false)
+    }
+    if (weddingId) void loadWedding()
+    else setLoading(false)
+    return () => {
+      mounted = false
+    }
+  }, [weddingId])
+
+  if (loading) return <p className="rounded-2xl border border-ink/10 bg-canvas p-8 text-center text-sm text-muted">Cargando vuestra boda…</p>
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-[26px] bg-ink p-6 text-canvas shadow-card sm:p-8">
+      {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+      {wedding && <section className="relative overflow-hidden rounded-[26px] bg-ink p-6 text-canvas shadow-card sm:p-8">
         <div className="absolute -right-10 -top-24 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
-        <div className="absolute -bottom-24 right-1/3 h-48 w-48 rounded-full bg-muted/15 blur-3xl" />
-        <div className="relative grid items-center gap-7 md:grid-cols-[1fr_auto]">
-          <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-canvas/15 bg-canvas/10 px-3 py-1.5 text-[11px] font-medium text-canvas/90">
-              <Sparkles size={13} /> PRÓXIMO EVENTO
-            </span>
-            <h2 className="mt-4 font-display text-3xl sm:text-4xl">{nextEvent.title}</h2>
-            <p className="mt-2 flex items-center gap-1.5 text-sm text-canvas/75"><MapPin size={15} />{nextEvent.venue}</p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-2 rounded-xl bg-canvas/10 px-3 py-2 text-xs font-medium"><CalendarDays size={15} /> Sábado, 17 de octubre</span>
-              <span className="inline-flex items-center gap-2 rounded-xl bg-canvas/10 px-3 py-2 text-xs font-medium"><Clock3 size={15} /> En 11 días</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 rounded-2xl border border-canvas/10 bg-canvas/[0.07] p-4 md:min-w-[210px] md:flex-col md:items-start">
-            <div className="flex -space-x-2">
-              {['C', 'A'].map((letter) => <span key={letter} className="grid h-10 w-10 place-items-center rounded-full border-2 border-ink bg-accent text-sm font-semibold text-canvas">{letter}</span>)}
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-canvas/75">Preparativos listos</p>
-              <p className="mt-0.5 text-lg font-semibold">82%</p>
-            </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-canvas/15 md:w-full">
-              <div className="h-full rounded-full bg-canvas/80" style={{ width: `${nextEvent.progress}%` }} />
-            </div>
+        <div className="relative">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-canvas/15 bg-canvas/10 px-3 py-1.5 text-[11px] font-medium"><Sparkles size={13} /> VUESTRA BODA</span>
+          <h2 className="mt-4 font-display text-3xl sm:text-4xl">{wedding.partner_names}</h2>
+          {(wedding.venue || wedding.location) && <p className="mt-2 flex items-center gap-1.5 text-sm text-canvas/75"><MapPin size={15} />{[wedding.venue, wedding.location].filter(Boolean).join(' · ')}</p>}
+          <div className="mt-6 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-2 rounded-xl bg-canvas/10 px-3 py-2 text-xs font-medium"><CalendarDays size={15} />{formatDate(wedding.wedding_date)}</span>
+            {remainingDays !== null && <span className="inline-flex items-center gap-2 rounded-xl bg-canvas/10 px-3 py-2 text-xs font-medium"><Clock3 size={15} />{remainingDays > 0 ? `Quedan ${remainingDays} días` : remainingDays === 0 ? '¡Es hoy!' : '¡Enhorabuena por vuestra boda!'}</span>}
           </div>
         </div>
-      </section>
+      </section>}
 
       <WeddingInspiration />
 
-      <section className="grid gap-8 lg:grid-cols-[1.35fr_.85fr]">
-        <div>
-          <SectionHeading title="Vuestros eventos" action="Ver todos" onAction={() => onNavigate('wedding')} />
-          <div className="space-y-3">
-            {upcomingEvents.map((event) => (
-              <button key={event.title} onClick={() => onNavigate('wedding')} className="group flex w-full items-center gap-4 rounded-2xl border border-ink/10 bg-canvas p-4 text-left shadow-card transition hover:-translate-y-0.5 hover:border-accent/50 sm:p-5">
-                <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${event.tone}`}>
-                  <span className="text-center"><span className="block font-display text-xl leading-5 text-ink">{event.day}</span><span className="mt-1 block text-[9px] font-semibold tracking-wider text-muted">{event.month}</span></span>
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold text-ink">{event.title}</span>
-                  <span className="mt-1 flex items-center gap-1 truncate text-xs text-muted"><MapPin size={12} />{event.venue}</span>
-                </span>
-                <span className="hidden text-right sm:block">
-                  <span className="block text-xs font-medium text-accent">{event.daysLeft}</span>
-                  <span className="mt-2 block h-1 w-20 overflow-hidden rounded-full bg-accent/10"><span className="block h-full rounded-full bg-accent" style={{ width: `${event.progress}%` }} /></span>
-                </span>
-                <ArrowRight size={17} className="text-muted/50 transition group-hover:translate-x-1 group-hover:text-accent" />
-              </button>
-            ))}
-            <button onClick={() => onNavigate('account')} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-ink/20 py-4 text-sm font-medium text-muted transition hover:border-accent hover:text-accent">
-              <Plus size={16} /> Añadir evento
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <section className="rounded-2xl border border-ink/10 bg-canvas p-5 shadow-card sm:p-6">
-            <SectionHeading title="Esta semana" action="Ver boda" onAction={() => onNavigate('wedding')} />
-            <div className="space-y-5">
-              {[
-                ['Elegir canción del primer baile', 'Hoy · Música', false],
-                ['Confirmar horario del cóctel', 'Jue, 8 oct · Organización', true],
-                ['Revisar canciones prohibidas', 'Sáb, 10 oct · Música', false],
-              ].map(([label, detail, completed]) => (
-                <div key={label} className="flex items-start gap-3">
-                  <span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border ${completed ? 'border-accent bg-accent text-canvas' : 'border-ink/20 text-transparent'}`}><Check size={13} /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className={`block text-sm font-medium ${completed ? 'text-muted line-through' : 'text-ink'}`}>{label}</span>
-                    <span className="mt-1 block text-[11px] text-muted">{detail}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-          <button onClick={() => onNavigate('requests')} className="group flex w-full items-center gap-4 rounded-2xl bg-accent/10 p-5 text-left transition hover:bg-accent/15">
-            <span className="grid h-11 w-11 place-items-center rounded-xl bg-canvas text-accent"><Music2 size={20} /></span>
-            <span className="flex-1"><span className="block text-sm font-semibold text-ink">La música lo cambia todo</span><span className="mt-1 block text-xs text-muted">Añade vuestras canciones favoritas</span></span>
-            <ArrowRight size={17} className="text-accent transition group-hover:translate-x-1" />
-          </button>
+      <section>
+        <SectionHeading title="Vuestro espacio" />
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            ['requests', Music2, 'Vuestras canciones', 'Añadid peticiones a la lista musical'],
+            ['wedding', CalendarDays, 'Información de la boda', 'Consultad el horario y los detalles'],
+            ['budget', Wallet, 'Presupuesto', 'Revisad el presupuesto y descargad el PDF'],
+          ].map(([tab, Icon, title, detail]) => <button key={tab} onClick={() => onNavigate(tab)} className="flex items-center gap-4 rounded-2xl border border-ink/10 bg-canvas p-4 text-left shadow-card transition hover:border-accent/50">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent"><Icon size={19} /></span>
+            <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-ink">{title}</span><span className="mt-1 block text-xs leading-5 text-muted">{detail}</span></span>
+            <ArrowRight size={16} className="text-muted" />
+          </button>)}
         </div>
       </section>
+
       <p className="text-center text-xs text-muted">¡Qué bonito lo que estáis preparando, {firstName}! <Sparkles size={13} className="inline text-accent" /></p>
     </div>
   )

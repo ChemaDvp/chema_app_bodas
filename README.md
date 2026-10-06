@@ -16,11 +16,15 @@ No hay una API/servidor intermedio propio. Las credenciales de Supabase que usa 
 
 Ya está implementado el inicio de sesión con Supabase Auth, la consulta del rol y la comprobación de la boda vinculada. La pantalla de acceso no ofrece registro público y las cuentas sin rol ni boda asociada quedan bloqueadas. El frontend también permite solicitar el restablecimiento de contraseña y definir una nueva desde el enlace recibido por correo.
 
-La conexión con Supabase está en su fase inicial: **las páginas principales aún usan datos locales de demostración**. Todavía no están implementados el alta/edición de bodas desde la interfaz, la carga de presupuestos y multimedia, la gestión persistente de canciones, las invitaciones QR/enlace ni la separación completa de las interfaces y acciones por rol. No usar todavía con información real de clientes.
+La vista de administración permite listar, crear y editar bodas, gestionar su cronograma, revisar canciones, editar el presupuesto y cargar contenido promocional. La vista de pareja es de consulta, salvo la gestión de canciones. Las peticiones, presupuestos, cronogramas y contenido se leen/guardan en Supabase.
+
+La carpeta `supabase/migrations/` contiene las ampliaciones que hay que ejecutar en el SQL Editor del proyecto Supabase antes de desplegar estas funciones. El administrador genera invitaciones QR de un solo uso (caducan a los 7 días y se invalidan al crear otra). Por seguridad el registro público sigue desactivado: el DJ debe invitar primero la cuenta desde **Supabase → Authentication → Users** y compartir después el QR/enlace para vincularla a una boda.
+
+La aplicación todavía no envía invitaciones de Auth por sí misma ni incluye funciones de notificación por correo cuando se rechaza una canción. El rechazo queda registrado y se notifica en pantalla al DJ, y la canción sigue en el historial mientras libera un hueco de la lista activa.
 
 ## Modelo de datos de Supabase
 
-El esquema inicial creado en el proyecto incluye:
+El esquema base creado en el proyecto incluye:
 
 | Tabla | Uso |
 | --- | --- |
@@ -31,8 +35,14 @@ El esquema inicial creado en el proyecto incluye:
 | `budget_notes` | Textos informativos asociados al presupuesto. |
 | `songs` | Peticiones musicales, estado de revisión y usuario que las añadió. |
 | `media_items` | Referencias al contenido promocional común y su orden/estado. |
+| `wedding_schedule_items` | Cronograma de momentos de cada boda, visible para la pareja. |
+| `wedding_invitations` | Huellas de invitaciones de un solo uso, caducidad y canje. |
 
-El script inicial habilita RLS y configura políticas para administración y miembros. También impone en la base de datos un máximo de 30 canciones no rechazadas por boda. El flujo de invitaciones aún no existe; las parejas deben vincularse de forma controlada antes de habilitar su acceso.
+La migración `202610060001_app_features.sql` añade el tipo de petición musical, `wedding_schedule_items`, invitaciones de un solo uso y RPCs seguros para crearlas/canjearlas/revocarlas. El script inicial habilita RLS y configura políticas para administración y miembros; la migración también habilita RLS en sus tablas nuevas. Un trigger impone en la base de datos un máximo de 30 canciones no rechazadas por boda.
+
+### Aplicar la migración en Supabase
+
+Antes de desplegar el frontend actualizado, abre **Supabase → SQL Editor → New query**, copia el contenido completo de `supabase/migrations/202610060001_app_features.sql`, ejecútalo una sola vez y verifica el resultado **Success**. No lo ejecutes repetidamente: incluye creación de políticas y funciones. Si ya se ejecutó, no es necesario volver a aplicarlo.
 
 ## Requisitos
 
@@ -79,17 +89,18 @@ src/
 │   └── supabase.js               # Cliente Supabase y validación de variables
 ├── components/
 │   ├── AuthScreen.jsx            # Inicio de sesión
-│   ├── DashboardLayout.jsx       # Navegación y marco principal
+│   ├── DashboardLayout.jsx       # Navegación y marco principal por rol
 │   ├── SectionHeading.jsx        # Encabezado reutilizable de sección
-│   └── WeddingInspiration.jsx    # Collage y carrusel promocional de muestra
+│   └── WeddingInspiration.jsx    # Collage/carrusel común desde Supabase Storage
 ├── pages/
+│   ├── AdminMediaPage.jsx        # Subida y gestión del contenido común
+│   ├── AdminWeddingWorkspace.jsx # Gestión, revisión e invitación QR por boda
+│   ├── AdminWeddingsPage.jsx     # Listado y mantenimiento de bodas para el DJ
 │   ├── DashboardPage.jsx         # Inicio
-│   ├── RequestsPage.jsx          # Peticiones musicales (actualmente demo local)
-│   ├── WeddingPage.jsx           # Información de boda (actualmente demo local)
-│   ├── BudgetPage.jsx            # Presupuesto (actualmente demo local)
-│   └── AccountPage.jsx           # Cuenta
-└── data/
-    └── demoData.js               # Datos de muestra del frontend
+│   ├── RequestsPage.jsx          # Lista musical y revisión de peticiones
+│   ├── WeddingPage.jsx           # Información y cronograma
+│   ├── BudgetPage.jsx            # Desglose, notas y PDF privado
+│   └── AccountPage.jsx           # Cuenta de consulta / administración
 public/
 └── images/                       # Imágenes locales usadas por la interfaz
 ```
